@@ -1,4 +1,3 @@
-
 import requests
 import json
 import random
@@ -10,13 +9,16 @@ from pathlib import Path
 LOTTERY_ADDRESS = "bc1psewn5hprrlhhcze9x9lcpd74wmpy26cwaxpzc270v8x0h9kt3kls6hrax4"
 CREATOR_ADDRESS = "bc1prhcdy4ytncv8xgq0xwtqg0gfk2t38asddq3ex7xxa43dxhrfhkhsn6yhk9"
 DOG_RUNE_ID = "1000806"
-ENTRIES_FILE = "data/lottery_entries.json"
-STATUS_FILE = "data/lottery_status.json"
+ENTRIES_FILE = "lottery_entries.json"
+STATUS_FILE = "lottery_status.json"
 MIN_ENTRY_AMOUNT = 1000
 
-# API Setup
-API_URL = f"https://open-api.unisat.io/v1/indexer/address/{LOTTERY_ADDRESS}/rune/txs?runeId={DOG_RUNE_ID}&start=0&limit=100"
-HEADERS = {"accept": "application/json"}
+# Updated UniSat API URL
+API_URL = f"https://open-api.unisat.io/v1/indexer/address/{LOTTERY_ADDRESS}/rune/txs?tick=DOG&start=0&limit=100"
+HEADERS = {
+    "accept": "application/json",
+    "User-Agent": "Mozilla/5.0"
+}
 
 def load_existing_txids(filepath):
     if not Path(filepath).exists():
