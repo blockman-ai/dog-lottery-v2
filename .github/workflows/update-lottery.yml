@@ -30,7 +30,7 @@ jobs:
         run: |
           git config --global user.name "blockman-ai"
           git config --global user.email "bot@blockman.ai"
-          git add data/lottery_entries.json data/lottery_status.json
+          git add lottery_entries.json lottery_status.json
 
           if ! git diff --cached --quiet; then
             git commit -m "Auto-update lottery data"
