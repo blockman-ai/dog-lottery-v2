@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>$DOG Lottery Dashboard</title>
+  <link rel="icon" href="icon-192.png">
+  <meta name="theme-color" content="#00ff00">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600&family=Inter&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+  <script src="https://unpkg.com/web3modal@1.9.12/dist/index.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+  <style>
+    body {
+      background: #0a0a0a;
+      color: #d0ffd0;
+      font-family: 'Inter', sans-serif;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+      font-family: 'Orbitron', sans-serif;
+      color: #00ff00;
+      font-size: 2.5em;
+      animation: glow 3s ease-in-out infinite;
+    }
+    .dashboard {
+      max-width: 740px;
+      margin: 25px auto;
+      background: rgba(0,255,0,0.05);
+      border: 1px solid rgba(0,255,0,0.2);
+      border-radius: 20px;
+      padding: 24px;
+      backdrop-filter: blur(14px);
+      box-shadow: 0 0 30px rgba(0,255,0,0.2);
+      animation: fadeIn 0.7s ease-in;
+    }
+    .stat label, .dashboard h3 {
+      color: #00ff00;
+      font-weight: bold;
+    }
+    .stat span, .break-hash {
+      font-family: monospace;
+      font-size: 1.1em;
+      word-break: break-word;
+    }
+    input, button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 8px;
+      border-radius: 5px;
+      border: none;
+      font-size: 1em;
+    }
+    button {
+      background: #00ff00;
+      color: #000;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.2s ease;
+    }
+    button:hover {
+      background: #33ff33;
+      transform: scale(1.02);
+    }
+    #qrCode img {
+      max-width: 180px;
+      margin-top: 12px;
+      display: block;
+    }
+    ul { list-style: none; padding: 0; }
+    li { padding: 6px 0; border-bottom: 1px solid rgba(0,255,0,0.1); }
+    @keyframes glow {
+      0%, 100% { text-shadow: 0 0 5px #00ff00, 0 0 15px #00ff00; }
+      50% { text-shadow: 0 0 25px #00ff00, 0 0 40px #00ff00; }
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+<h1>$DOG Lottery</h1>
+
+<div class="dashboard">
+  <button onclick="connectWallet()">Connect Wallet</button>
+  <div id="walletInfo" style="margin-top:10px;"></div>
+</div>
+
+<div class="dashboard">
+  <div class="stat"><label>Live Pot:</label> <span id="potTotal">Loading...</span></div>
+  <div class="stat"><label>Winner Payout:</label> <span id="winnerPayout">Loading...</span></div>
+  <div class="stat"><label>Rollover:</label> <span id="rollover">Loading...</span></div>
+  <div class="stat"><label>Creator Fee:</label> <span id="creatorFee">Loading...</span></div>
+  <div class="stat"><label>Last Winner:</label> <span id="winnerTx">Loading...</span></div>
+  <div class="stat"><label>$DOG Price (USD):</label> <span id="dogPrice">Loading...</span></div>
+</div>
+
+<div class="dashboard">
+  <h3>Next Round Countdown</h3>
+  <span id="countdown">Loading...</span>
+</div>
+
+<div class="dashboard">
+  <h3>Current Entries</h3>
+  <ul id="entryList"></ul>
+</div>
+
+<div class="dashboard">
+  <h3>Past Winners</h3>
+  <ul id="winnerHistory"></ul>
+</div>
+
+<div class="dashboard">
+  <h3>Track Entry</h3>
+  <input type="text" id="trackInput" placeholder="Your txid or email">
+  <button onclick="lookupEntry()">Check Entry</button>
+  <div id="entryResult"></div>
+</div>
+
+<div class="dashboard">
+  <h3>Get Winner Alerts</h3>
+  <form id="notifyForm">
+    <input type="text" id="contactInput" placeholder="Email or X handle" required>
+    <input type="text" id="txidInput" placeholder="Your txid (optional)">
+    <button type="submit">Notify Me</button>
+    <p id="notifyStatus"></p>
+  </form>
+</div>
+
+<div class="dashboard">
+  <h3>Send $DOG to:</h3>
+  <div class="break-hash">bc1psewn5hprrlhhcze9x9lcpd74wmpy26cwaxpzc270v8x0h9kt3kls6hrax4</div>
+  <button onclick="generateQR()">Show QR Code</button>
+  <div id="qrCode"></div>
+</div>
+
+<script>
+  let web3Modal, provider;
+
+  function formatDOG(n) {
+    return Number(n).toLocaleString(undefined, { maximumFractionDigits: 4 });
+  }
+
+  async function connectWallet() {
+    web3Modal = new window.Web3Modal.default({ cacheProvider: false });
+    provider = await web3Modal.connect();
+    const ethersProvider = new ethers.providers.Web3Provider(provider);
+    const signer = ethersProvider.getSigner();
+    const address = await signer.getAddress();
+    document.getElementById("walletInfo").innerText = `Connected: ${address}`;
+    playSound("connect");
+  }
+
+  function playSound(type) {
+    const sounds = {
+      connect: "https://freesound.org/data/previews/270/270332_5123851-lq.mp3",
+      click: "https://freesound.org/data/previews/413/413854_5123851-lq.mp3"
+    };
+    new Audio(sounds[type]).play();
+  }
+
+  async function loadLotteryData() {
+    const res = await fetch("lottery_status.json");
+    const data = await res.json();
+    document.getElementById("potTotal").innerText = `${formatDOG(data.live_pot_total)} $DOG`;
+    document.getElementById("winnerPayout").innerText = `${formatDOG(data.payout_to_winner)} $DOG`;
+    document.getElementById("rollover").innerText = `${formatDOG(data.rollover_to_next_round)} $DOG`;
+    document.getElementById("creatorFee").innerText = `${formatDOG(data.creator_fee)} $DOG`;
+    document.getElementById("winnerTx").innerHTML = `
+      <div class="break-hash">${data.winner.txid}</div>
+      <div style="color:#aaffaa;">${formatDOG(data.winner.amount)} $DOG</div>`;
+  }
+
+  async function loadDOGPrice() {
+    try {
+      const res = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=dog-go-to-the-moon-rune&vs_currencies=usd");
+      const data = await res.json();
+      const dogPrice = data['dog-go-to-the-moon-rune'].usd;
+      document.getElementById("dogPrice").innerText = `$${dogPrice.toFixed(6)}`;
+    } catch {
+      document.getElementById("dogPrice").innerText = "Unavailable";
+    }
+  }
+
+  async function loadEntries() {
+    const res = await fetch("lottery_entries.json");
+    const data = await res.json();
+    const list = document.getElementById("entryList");
+    list.innerHTML = "";
+    data.forEach(entry => {
+      const li = document.createElement("li");
+      li.innerHTML = `<div class="break-hash">${entry.txid}</div><div>${formatDOG(entry.amount)} $DOG</div>`;
+      list.appendChild(li);
+    });
+  }
+
+  async function loadWinners() {
+    const res = await fetch("winners_history.json");
+    const data = await res.json();
+    const list = document.getElementById("winnerHistory");
+    list.innerHTML = "";
+    data.slice(-10).reverse().forEach(w => {
+      const li = document.createElement("li");
+      li.innerHTML = `<div class="break-hash">${w.txid}</div><div>${formatDOG(w.amount)} $DOG — ${new Date(w.timestamp).toLocaleDateString()}</div>`;
+      list.appendChild(li);
+    });
+  }
+
+  function generateQR() {
+    const addr = "bc1psewn5hprrlhhcze9x9lcpd74wmpy26cwaxpzc270v8x0h9kt3kls6hrax4";
+    QRCode.toDataURL(addr, (err, url) => {
+      document.getElementById("qrCode").innerHTML = `<img src="${url}" alt="QR Code">`;
+    });
+  }
+
+  function startCountdown() {
+    const target = new Date();
+    target.setUTCHours(0, 0, 0, 0);
+    if (Date.now() > target) target.setUTCDate(target.getUTCDate() + 1);
+    function update() {
+      const now = new Date().getTime();
+      const dist = target.getTime() - now;
+      const h = Math.floor(dist / (1000 * 60 * 60));
+      const m = Math.floor((dist % (1000 * 60 * 60)) / (1000 * 60));
+      const s = Math.floor((dist % (1000 * 60)) / 1000);
+      document.getElementById("countdown").innerText = `${h}h ${m}m ${s}s`;
+    }
+    update();
+    setInterval(update, 1000);
+  }
+
+  async function lookupEntry() {
+    const input = document.getElementById("trackInput").value.trim().toLowerCase();
+    const res = await fetch("lottery_entries.json");
+    const entries = await res.json();
+    const match = entries.find(e =>
+      e.txid.toLowerCase().includes(input) || (e.email && e.email.toLowerCase() === input)
+    );
+    document.getElementById("entryResult").innerText = match
+      ? `Found: ${match.txid} — ${formatDOG(match.amount)} $DOG`
+      : "No match found.";
+  }
+
+  document.getElementById("notifyForm").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const contact = document.getElementById("contactInput").value.trim();
+    const txid = document.getElementById("txidInput").value.trim();
+    const data = { contact, txid, timestamp: new Date().toISOString() };
+    console.log("Subscription request:", data);
+    document.getElementById("notifyStatus").innerText = "You're subscribed!";
+    document.getElementById("notifyForm").reset();
+    playSound("click");
+  });
+
+  loadLotteryData();
+  loadDOGPrice();
+  loadEntries();
+  loadWinners();
+  startCountdown();
+</script>
+
+<!-- Live Chat via Tawk.to -->
+<script type="text/javascript">
+var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date();
+(function(){
+var s=document.createElement("script");s.async=true;
+s.src='https://embed.tawk.to/XXXXXXXXX/1hxxxxxxx';  // Replace with your widget ID
+s.charset='UTF-8';s.setAttribute('crossorigin','*');
+document.head.appendChild(s);
+})();
+</script>
+
+</body>
+</html>
