@@ -23,7 +23,7 @@ jobs:
           python -m pip install --upgrade pip
 
       - name: Run Cleaned Lottery Script
-        run: python scripts/update_lottery_cleaned.py
+        run: python update_lottery_cleaned.py
 
       - name: Commit and Push Updates
         run: |
