@@ -1,0 +1,11 @@
+{
+  "live_pot_total": 546.0,
+  "payout_to_winner": 410.0,
+  "rollover_to_next_round": 109.0,
+  "creator_fee": 27.0,
+  "winner": {
+    "txid": "64745a32beb3ed6e4056e9c0622fef53f9163e3813be2f68cd1ceb959f4f1dbc",
+    "amount": 546.0
+  },
+  "creator_address": "bc1prhcdy4ytncv8xgq0xwtqg0gfk2t38asddq3ex7xxa43dxhrfhkhsn6yhk9"
+}
